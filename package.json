@@ -1,0 +1,16 @@
+{
+  "name": "naval-strike-6tim",
+  "version": "1.0.0",
+  "description": "Naval Strike - Game battleship multiplayer 6 tim + 1 admin/juri (realtime via Socket.IO)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
