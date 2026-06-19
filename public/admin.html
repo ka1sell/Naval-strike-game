@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Naval Strike — Admin</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  *::-webkit-scrollbar{width:6px;}
+
+  :root{
+    --bg:#0a1620; --panel:#0f2436; --line:#1a3a52; --line2:#234a66;
+    --sonar:#2dd4bf; --fire:#ff5d5d; --gold:#f5c542; --dim:#5b7c91; --white:#e8f1f5;
+    --t1:#ff5d5d; --t2:#2dd4bf; --t3:#f5c542; --t4:#a78bfa; --t5:#fb923c; --t6:#60a5fa;
+  }
+  body{
+    font-family:'Space Grotesk',sans-serif; background:var(--bg);
+    background-image:radial-gradient(circle at 20% 20%, rgba(45,212,191,.05), transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(255,93,93,.04), transparent 40%);
+    color:var(--white); min-height:100vh; display:flex; flex-direction:column;
+    align-items:center; padding:20px 16px 60px;
+  }
+  .wrap{ width:100%; max-width:1100px; }
+  header{ text-align:center; margin-bottom:18px; }
+  header h1{ font-family:'Space Mono',monospace; font-size:clamp(1.2rem,5vw,1.9rem); letter-spacing:.12em;
+    color:var(--sonar); text-shadow:0 0 18px rgba(45,212,191,.35); }
+  header h1 span{ color:var(--white); }
+  header p{ font-size:.8rem; color:var(--dim); margin-top:6px; letter-spacing:.03em; }
+
+  /* room code box */
+  .room-box{
+    background:var(--panel); border:1px solid var(--line2); border-radius:12px;
+    padding:16px; margin-bottom:18px; text-align:center;
+  }
+  .room-box .label{ font-size:.7rem; letter-spacing:.16em; color:var(--dim); text-transform:uppercase; margin-bottom:8px; }
+  .room-box .code{
+    font-family:'Space Mono',monospace; font-size:clamp(1.6rem,8vw,2.6rem); font-weight:700;
+    color:var(--gold); letter-spacing:.18em;
+  }
+  .room-box .hint{ font-size:.75rem; color:var(--dim); margin-top:8px; }
+  .room-actions{ display:flex; gap:10px; justify-content:center; margin-top:14px; flex-wrap:wrap; }
+
+  .status{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 18px;
+    margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    font-family:'Space Mono',monospace; font-size:.8rem;
+  }
+  .status .msg{ flex:1; min-width:0; }
+  .badge{ flex-shrink:0; padding:4px 10px; border-radius:6px; font-weight:700; letter-spacing:.06em; font-size:.68rem; text-transform:uppercase; }
+  .badge.lobby{ background:rgba(245,197,66,.15); color:var(--gold); border:1px solid var(--gold); }
+  .badge.deploy{ background:rgba(245,197,66,.15); color:var(--gold); border:1px solid var(--gold); }
+  .badge.battle{ background:rgba(45,212,191,.15); color:var(--sonar); border:1px solid var(--sonar); }
+  .badge.over{ background:rgba(245,197,66,.2); color:var(--gold); border:1px solid var(--gold); }
+
+  /* layout grid: leaderboard | board | log */
+  .layout{ display:grid; grid-template-columns:1fr; gap:18px; }
+  @media (min-width:900px){
+    .layout{ grid-template-columns: 280px 1fr 280px; }
+  }
+
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .panel h3{
+    font-family:'Space Mono',monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--dim); margin-bottom:12px; display:flex; align-items:center; gap:8px;
+  }
+  .panel h3 .dot{ width:8px; height:8px; border-radius:50%; background:var(--sonar); box-shadow:0 0 8px var(--sonar); }
+
+  /* leaderboard */
+  .lb-item{
+    display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px;
+    border:1px solid var(--line); margin-bottom:6px; font-family:'Space Mono',monospace; font-size:.78rem;
+    transition: all .2s;
+  }
+  .lb-item .rank{ width:18px; text-align:center; color:var(--dim); font-weight:700; }
+  .lb-item .sw{ width:10px; height:10px; border-radius:3px; background:var(--swatch); flex-shrink:0; }
+  .lb-item .name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-item .pts{ font-weight:700; color:var(--gold); }
+  .lb-item.eliminated{ opacity:.4; }
+  .lb-item.eliminated .pts{ color:var(--fire); }
+  .lb-item.first{ border-color: var(--gold); box-shadow: 0 0 10px rgba(245,197,66,.2); }
+
+  /* teams control grid */
+  .teams-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:16px; }
+  @media (min-width:600px){ .teams-grid{ grid-template-columns:repeat(3,1fr); } }
+  @media (min-width:900px){ .teams-grid{ grid-template-columns:repeat(2,1fr); } }
+  .team-card{
+    background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:9px 10px;
+    font-family:'Space Mono',monospace; font-size:.74rem;
+  }
+  .team-card .row1{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .team-card .sw{ width:12px; height:12px; border-radius:3px; background:var(--swatch); flex-shrink:0; }
+  .team-card .tname{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }
+  .team-card .tstat{ font-size:.65rem; color:var(--dim); }
+  .team-card.eliminated{ opacity:.4; }
+  .team-card.eliminated .tstat{ color:var(--fire); }
+  .team-card.online .tname::before{ content:'● '; color:var(--sonar); }
+  .team-card.offline .tname::before{ content:'○ '; color:var(--dim); }
+  .team-card .row2{ display:flex; gap:4px; flex-wrap:wrap; }
+  .tbtn{
+    flex:1; min-width:46px; padding:6px 4px; border-radius:6px; border:1px solid var(--line);
+    background:var(--panel); color:var(--white); font-family:'Space Mono',monospace; font-size:.66rem;
+    font-weight:700; cursor:pointer; transition:all .12s;
+  }
+  .tbtn:hover{ border-color:var(--sonar); }
+  .tbtn:disabled{ opacity:.3; cursor:not-allowed; }
+  .tbtn.fire{ background:rgba(45,212,191,.15); border-color:var(--sonar); color:var(--sonar); }
+  .tbtn.fire.active{ background:var(--sonar); color:#07151c; }
+  .tbtn.good{ border-color:#3fae6a; color:#3fae6a; }
+  .tbtn.bad{ border-color:var(--fire); color:var(--fire); }
+  .tbtn.kick{ border-color:var(--fire); color:var(--fire); flex-basis:100%; margin-top:4px; }
+  .tbtn.kick:hover{ background:rgba(255,93,93,.15); }
+
+  /* join request notification */
+  .jr-item{
+    display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:8px;
+    border:1px solid var(--gold); background:rgba(245,197,66,.08); margin-bottom:8px;
+    font-family:'Space Mono',monospace; font-size:.78rem; flex-wrap:wrap;
+  }
+  .jr-item .jr-name{ flex:1; min-width:120px; font-weight:700; }
+  .jr-item .jr-slot{ color:var(--dim); font-size:.7rem; }
+  .jr-item button{
+    padding:7px 12px; border-radius:6px; border:none; font-family:'Space Grotesk',sans-serif;
+    font-weight:700; font-size:.74rem; cursor:pointer;
+  }
+  .jr-item .jr-approve{ background:var(--sonar); color:#07151c; }
+  .jr-item .jr-reject{ background:transparent; color:var(--fire); border:1px solid var(--fire); }
+
+  /* board */
+  .grid-wrap{
+    display:grid; grid-template-columns:24px repeat(8,1fr); grid-template-rows:24px repeat(8,1fr);
+    gap:3px; width:100%; aspect-ratio:9/9; max-width:480px; margin:0 auto;
+  }
+  .gh{ display:flex; align-items:center; justify-content:center; font-family:'Space Mono',monospace; font-size:.65rem; color:var(--dim); }
+  .cell{
+    background:var(--panel); border:1px solid var(--line); border-radius:5px;
+    display:flex; align-items:center; justify-content:center; position:relative;
+    font-size:clamp(.7rem,2.4vw,1.1rem); transition:background .12s,border-color .12s; user-select:none;
+  }
+  .cell.ship{ background: rgba(255,255,255,.05); }
+  .cell.ship::after{ content:''; width:50%; height:50%; border-radius:3px; background:var(--swatch); opacity:.45; }
+  .cell.multi-ship::after{ background: var(--gold); opacity:.55; }
+  .cell.miss{ background:var(--panel); border-color:var(--line); }
+  .cell.miss::after{ content:''; width:26%; height:26%; border-radius:50%; background:var(--dim); opacity:.6; }
+  .cell.hit::after{ content:'🔥'; }
+  .cell.hit.sunk{ box-shadow: inset 0 0 0 2px var(--swatch); }
+  .cell.hit.sunk::after{ content:'☠'; }
+  .cell.selectable{ cursor:pointer; }
+  .cell.selectable:hover{ border-color:var(--sonar); background:#122c40; }
+  .cell.pending{ border-color:var(--gold); background:rgba(245,197,66,.18); }
+
+  .fire-bar{
+    background:var(--bg); border:1px solid var(--line2); border-radius:12px; padding:14px 16px;
+    margin-top:16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    font-family:'Space Mono',monospace; font-size:.85rem;
+  }
+  .fire-bar .coord{ font-weight:700; color:var(--gold); }
+  .fire-bar .spacer{ flex:1; }
+  .fire-bar button{
+    padding:9px 14px; border-radius:8px; border:none; font-family:'Space Grotesk',sans-serif;
+    font-weight:700; font-size:.82rem; cursor:pointer;
+  }
+  .fire-bar .b-hit{ background:var(--fire); color:#1a0a0a; }
+  .fire-bar .b-cancel{ background:transparent; color:var(--dim); border:1px solid var(--line); }
+
+  /* start battle button */
+  .start-bar{ text-align:center; margin-top:16px; }
+  .btn{
+    padding:13px 22px; border-radius:10px; border:1px solid var(--line); background:var(--panel);
+    color:var(--white); font-family:'Space Grotesk',sans-serif; font-size:.9rem; font-weight:700;
+    cursor:pointer; letter-spacing:.03em; transition:all .15s;
+  }
+  .btn:hover{ border-color:var(--sonar); }
+  .btn.primary{ background:var(--sonar); border-color:var(--sonar); color:#07151c; }
+  .btn.primary:hover{ opacity:.9; }
+  .btn.ghost{ color:var(--dim); }
+  .btn:disabled{ opacity:.35; cursor:not-allowed; }
+
+  /* deploy progress */
+  .deploy-list{ display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .deploy-item{
+    display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px;
+    border:1px solid var(--line); font-family:'Space Mono',monospace; font-size:.78rem;
+  }
+  .deploy-item .sw{ width:10px; height:10px; border-radius:3px; background:var(--swatch); }
+  .deploy-item .name{ flex:1; }
+  .deploy-item .check{ font-size:.9rem; }
+
+  /* log */
+  .log-list{ display:flex; flex-direction:column; gap:6px; max-height:480px; overflow-y:auto; }
+  .log-item{ font-family:'Space Mono',monospace; font-size:.7rem; color:var(--dim); line-height:1.5; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  .log-item:last-child{ border-bottom:none; }
+
+  /* overlay end */
+  .overlay{ position:fixed; inset:0; background:rgba(5,12,18,.85); display:flex; align-items:center; justify-content:center; z-index:50; backdrop-filter:blur(6px); }
+  .win-card{ background:var(--panel); border:1px solid var(--line2); border-radius:18px; padding:38px 32px; text-align:center; max-width:380px; width:90%; }
+  .win-emoji{ font-size:3.2rem; margin-bottom:12px; }
+  .win-label{ font-family:'Space Mono',monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin-bottom:8px; }
+  .win-name{ font-family:'Space Mono',monospace; font-size:1.4rem; margin-bottom:14px; }
+  .order-list{ text-align:left; font-family:'Space Mono',monospace; font-size:.8rem; line-height:2; max-height:320px; overflow-y:auto; }
+  .order-list .o-rank{ color:var(--gold); margin-right:6px; }
+  .win-again{ width:100%; padding:13px; background:var(--sonar); color:#07151c; border:none; border-radius:9px; font-family:'Space Grotesk',sans-serif; font-size:.95rem; font-weight:700; cursor:pointer; margin-top:18px; }
+
+  .hidden{ display:none !important; }
+  .small{ font-size:.7rem; color:var(--dim); text-align:center; margin-top:10px; }
+  input.code-input{
+    font-family:'Space Mono',monospace; font-size:1.1rem; letter-spacing:.2em; text-align:center;
+    text-transform:uppercase; padding:12px; border-radius:8px; border:1px solid var(--line);
+    background:var(--bg); color:var(--white); width:200px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>NAVAL <span>STRIKE</span></h1>
+  <p>Panel Juri / Operator — kendali penuh permainan</p>
+</header>
+
+<!-- ══ SETUP: belum ada room ══ -->
+<div id="setup" class="room-box">
+  <div class="label">Mulai Sesi</div>
+  <div class="room-actions">
+    <button class="btn primary" onclick="createRoom()">+ Buat Room Baru</button>
+  </div>
+  <p class="small">atau masukkan kode room yang sudah ada untuk melanjutkan sesi:</p>
+  <div class="room-actions">
+    <input class="code-input" id="rejoin-code" placeholder="KODE" maxlength="6">
+    <button class="btn" onclick="rejoinRoom()">Lanjutkan</button>
+  </div>
+</div>
+
+<!-- ══ MAIN ADMIN VIEW ══ -->
+<div id="main" class="hidden">
+
+  <div class="room-box">
+    <div class="label">Kode Room — Bagikan ke 6 Peserta</div>
+    <div class="code" id="room-code">------</div>
+    <div class="hint">Peserta membuka halaman peserta dan memasukkan kode ini.</div>
+  </div>
+
+  <div class="status">
+    <div class="msg" id="status-msg">Memuat...</div>
+    <div class="badge lobby" id="status-badge">LOBBY</div>
+  </div>
+
+  <!-- notifikasi permintaan masuk kembali -->
+  <div id="join-requests-panel" class="panel hidden" style="border-color:var(--gold);">
+    <h3 style="color:var(--gold);"><span class="dot" style="background:var(--gold);"></span> PERMINTAAN MASUK KEMBALI</h3>
+    <div id="join-requests-list"></div>
+  </div>
+
+  <!-- deploy phase: progress list -->
+  <div id="deploy-panel" class="panel hidden">
+    <h3><span class="dot"></span> STATUS PENEMPATAN KAPAL</h3>
+    <div class="deploy-list" id="deploy-list"></div>
+    <div class="start-bar">
+      <button class="btn primary" id="start-battle-btn" onclick="startBattle()" disabled>⚔️ Semua Siap — Mulai Pertempuran</button>
+    </div>
+  </div>
+
+  <!-- battle layout -->
+  <div id="battle-layout" class="layout hidden">
+
+    <!-- leaderboard -->
+    <div class="panel">
+      <h3><span class="dot"></span> LEADERBOARD</h3>
+      <div id="leaderboard"></div>
+    </div>
+
+    <!-- center: board + controls -->
+    <div class="panel">
+      <h3><span class="dot"></span> KONTROL TIM &amp; PAPAN PERTEMPURAN</h3>
+      <div class="teams-grid" id="teams-grid"></div>
+      <div class="grid-wrap" id="grid-battle"></div>
+      <div class="fire-bar hidden" id="fire-bar">
+        <span>Konfirmasi tembakan <span class="coord" id="fire-coord">A1</span> oleh <b id="fire-team"></b>?</span>
+        <span class="spacer"></span>
+        <button class="b-hit" onclick="resolveFire()">🎯 Eksekusi Tembakan</button>
+        <button class="b-cancel" onclick="cancelFire()">Batal</button>
+      </div>
+      <p class="small">Klik tombol "Izinkan Tembak" pada tim yang menjawab kuis dengan benar. Peserta akan memilih koordinat sendiri, lalu eksekusi di sini.</p>
+    </div>
+
+    <!-- log -->
+    <div class="panel">
+      <h3><span class="dot"></span> RIWAYAT</h3>
+      <div class="log-list" id="log-list"></div>
+    </div>
+
+  </div>
+
+  <div class="start-bar">
+    <button class="btn ghost" onclick="resetRoom()">🔄 Reset Permainan (kode room tetap)</button>
+  </div>
+</div>
+
+<!-- ══ END OVERLAY ══ -->
+<div class="overlay hidden" id="ov-end">
+  <div class="win-card">
+    <div class="win-emoji">🏁</div>
+    <div class="win-label">Permainan Selesai</div>
+    <div class="win-name">Hasil Akhir &amp; Leaderboard</div>
+    <div class="order-list" id="order-list"></div>
+    <button class="win-again" onclick="closeEndOverlay()">Tutup</button>
+  </div>
+</div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const SIZE = 8;
+const COLS = 'ABCDEFGH';
+const SHIP_LEN = 3;
+const socket = io();
+let currentState = null;
+let myRoomCode = null;
+
+// ── SETUP ──
+function createRoom() {
+  socket.emit('admin:createRoom');
+}
+function rejoinRoom() {
+  const code = document.getElementById('rejoin-code').value.trim().toUpperCase();
+  if (!code) return;
+  socket.emit('admin:joinRoom', { code });
+}
+
+socket.on('admin:roomCreated', ({ code }) => {
+  myRoomCode = code;
+  localStorage.setItem('navalstrike_admin_room', code);
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('main').classList.remove('hidden');
+  document.getElementById('room-code').textContent = code;
+});
+
+socket.on('errorMsg', (msg) => {
+  alert(msg);
+});
+
+// auto-rejoin on refresh
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('navalstrike_admin_room');
+  if (saved) {
+    socket.emit('admin:joinRoom', { code: saved });
+  }
+});
+
+// ── STATE RENDER ──
+socket.on('state', (state) => {
+  currentState = state;
+  render();
+});
+
+function render() {
+  if (!currentState) return;
+  const s = currentState;
+
+  document.getElementById('room-code').textContent = s.code;
+
+  // status badge & message
+  const badge = document.getElementById('status-badge');
+  if (s.phase === 'lobby') { badge.textContent = 'LOBBY'; badge.className = 'badge lobby'; }
+  else if (s.phase === 'deploy') { badge.textContent = 'DEPLOY'; badge.className = 'badge deploy'; }
+  else if (s.phase === 'battle') { badge.textContent = 'PERTEMPURAN'; badge.className = 'badge battle'; }
+  else { badge.textContent = 'SELESAI'; badge.className = 'badge over'; }
+
+  const connectedCount = s.teams.filter(t => t.connected).length;
+  const placedCount = s.teams.filter(t => t.placed).length;
+
+  let msg = '';
+  if (s.phase === 'lobby' || s.phase === 'deploy') {
+    msg = `${connectedCount}/6 peserta terhubung — ${placedCount}/6 sudah menempatkan kapal.`;
+  } else if (s.phase === 'battle') {
+    if (s.pendingFire) {
+      const pf = s.pendingFire;
+      msg = `${s.teams[pf.teamId].name} mengajukan tembakan di ${COLS[pf.c]}${pf.r+1} — menunggu konfirmasi.`;
+    } else if (s.activeTeamId !== null) {
+      msg = `${s.teams[s.activeTeamId].name} sedang memilih koordinat tembakan...`;
+    } else {
+      msg = `Pilih tim yang menjawab kuis dengan benar untuk mengizinkan tembakan.`;
+    }
+  } else {
+    msg = 'Permainan telah selesai.';
+  }
+  document.getElementById('status-msg').innerHTML = msg;
+
+  // show/hide panels by phase
+  document.getElementById('deploy-panel').classList.toggle('hidden', !(s.phase === 'lobby' || s.phase === 'deploy'));
+  document.getElementById('battle-layout').classList.toggle('hidden', !(s.phase === 'battle' || s.phase === 'over'));
+
+  // notifikasi permintaan masuk kembali (tampil di semua fase)
+  renderJoinRequests(s);
+
+  if (s.phase === 'lobby' || s.phase === 'deploy') {
+    renderDeployList(s);
+  }
+  if (s.phase === 'battle' || s.phase === 'over') {
+    renderTeamsGrid(s);
+    renderLeaderboard(s);
+    renderBattleBoard(s);
+    renderLog(s);
+    renderFireBar(s);
+  }
+
+  if (s.phase === 'over') {
+    showEndOverlay(s);
+  } else {
+    document.getElementById('ov-end').classList.add('hidden');
+  }
+}
+
+// ── JOIN REQUESTS (notifikasi masuk kembali) ──
+function renderJoinRequests(s) {
+  const panel = document.getElementById('join-requests-panel');
+  const list = document.getElementById('join-requests-list');
+  const reqs = s.joinRequests || [];
+
+  if (reqs.length === 0) {
+    panel.classList.add('hidden');
+    list.innerHTML = '';
+    return;
+  }
+
+  panel.classList.remove('hidden');
+  list.innerHTML = reqs.map(jr => {
+    const team = s.teams[jr.teamId];
+    return `
+    <div class="jr-item">
+      <span class="jr-name">${escapeHtml(jr.name)}</span>
+      <span class="jr-slot">ingin masuk kembali sebagai <b style="color:${team.color}">${escapeHtml(team.name)}</b></span>
+      <button class="jr-approve" onclick="approveJoin('${jr.id}')">✅ Izinkan Masuk</button>
+      <button class="jr-reject" onclick="rejectJoin('${jr.id}')">✕ Tolak</button>
+    </div>`;
+  }).join('');
+}
+function approveJoin(requestId) {
+  socket.emit('admin:approveJoin', { requestId });
+}
+function rejectJoin(requestId) {
+  socket.emit('admin:rejectJoin', { requestId });
+}
+function kickPlayer(teamId) {
+  const team = currentState.teams[teamId];
+  if (!confirm(`Keluarkan "${team.name}" dari room? Slot akan dikosongkan dan bisa diisi peserta baru.`)) return;
+  socket.emit('admin:kickPlayer', { teamId });
+}
+
+// ── DEPLOY PANEL ──
+function renderDeployList(s) {
+  const list = document.getElementById('deploy-list');
+  list.innerHTML = s.teams.map(t => `
+    <div class="deploy-item">
+      <span class="sw" style="background:${t.color}"></span>
+      <span class="name">${escapeHtml(t.name)} ${t.connected ? '' : '<span style=\"color:var(--dim)\">(belum terhubung)</span>'}</span>
+      <span class="check">${t.placed ? '✅' : '⏳'}</span>
+      ${t.everJoined ? `<button class="tbtn kick" style="flex-basis:auto; margin-top:0; padding:5px 8px;" onclick="kickPlayer(${t.id})" title="Keluarkan peserta">👋</button>` : ''}
+    </div>
+  `).join('');
+
+  const allReady = s.teams.every(t => t.placed);
+  document.getElementById('start-battle-btn').disabled = !allReady;
+}
+
+function startBattle() {
+  socket.emit('admin:startBattle');
+}
+
+// ── LEADERBOARD ──
+function renderLeaderboard(s) {
+  const sorted = [...s.teams].sort((a,b) => b.points - a.points);
+  const el = document.getElementById('leaderboard');
+  el.innerHTML = sorted.map((t, i) => `
+    <div class="lb-item ${t.eliminated ? 'eliminated' : ''} ${i===0 ? 'first' : ''}" style="--swatch:${t.color}">
+      <span class="rank">${i+1}</span>
+      <span class="sw"></span>
+      <span class="name">${escapeHtml(t.name)}</span>
+      <span class="pts">${t.points}</span>
+    </div>
+  `).join('');
+}
+
+// ── TEAMS CONTROL GRID ──
+function renderTeamsGrid(s) {
+  const grid = document.getElementById('teams-grid');
+  grid.innerHTML = s.teams.map(t => {
+    const livesStr = '❤️'.repeat(t.lives) + '🖤'.repeat(SHIP_LEN - t.lives);
+    const isActive = s.activeTeamId === t.id;
+    const fireDisabled = (s.phase !== 'battle') || t.eliminated || !!s.pendingFire || (s.activeTeamId !== null && !isActive);
+    return `
+    <div class="team-card ${t.connected ? 'online':'offline'} ${t.eliminated ? 'eliminated':''}" style="--swatch:${t.color}">
+      <div class="row1">
+        <span class="sw"></span>
+        <span class="tname">${escapeHtml(t.name)}</span>
+        <span class="tstat">${t.points} pts</span>
+      </div>
+      <div class="tstat" style="margin-bottom:6px;">${t.eliminated ? `GUGUR #${t.eliminatedOrder}` : livesStr}</div>
+      <div class="row2">
+        <button class="tbtn fire ${isActive ? 'active':''}" ${fireDisabled?'disabled':''} onclick="setActiveTeam(${t.id})">${isActive ? '🎯 AKTIF' : 'Izinkan Tembak'}</button>
+        <button class="tbtn good" ${t.eliminated && s.phase!=='battle' ? '' : ''} onclick="quizCorrect(${t.id})" title="Jawaban benar +100">+100</button>
+        <button class="tbtn bad" onclick="quizWrong(${t.id})" title="Jawaban salah -100">-100</button>
+        <button class="tbtn kick" onclick="kickPlayer(${t.id})" title="Keluarkan peserta dari room">👋 Keluarkan ${escapeHtml(t.name)}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setActiveTeam(teamId) {
+  socket.emit('admin:setActiveTeam', { teamId });
+}
+function quizCorrect(teamId) {
+  socket.emit('admin:quizCorrect', { teamId });
+}
+function quizWrong(teamId) {
+  socket.emit('admin:quizWrong', { teamId });
+}
+
+// ── BATTLE BOARD ──
+function renderBattleBoard(s) {
+  const wrap = document.getElementById('grid-battle');
+  buildGridSkeleton(wrap);
+  wrap.querySelectorAll('.cell').forEach(cell => {
+    const r = +cell.dataset.r, c = +cell.dataset.c;
+    const state = s.revealed[r][c];
+    const ownerIds = s.board[r][c] || [];
+
+    cell.classList.remove('ship','multi-ship','hit','miss','sunk','pending');
+    cell.style.removeProperty('--swatch');
+    cell.style.boxShadow = '';
+
+    if (state === 'hit') {
+      cell.classList.add('hit');
+      const sunkOwners = ownerIds.filter(id => s.teams[id].eliminated);
+      if (sunkOwners.length > 0) {
+        cell.classList.add('sunk');
+        cell.style.setProperty('--swatch', s.teams[sunkOwners[0]].color);
+      }
+    } else if (state === 'miss') {
+      cell.classList.add('miss');
+    } else if (ownerIds.length > 0) {
+      cell.classList.add('ship');
+      if (ownerIds.length > 1) cell.classList.add('multi-ship');
+      else cell.style.setProperty('--swatch', s.teams[ownerIds[0]].color);
+    }
+
+    if (s.pendingFire && s.pendingFire.r === r && s.pendingFire.c === c) {
+      cell.classList.add('pending');
+    }
+  });
+}
+
+function buildGridSkeleton(container) {
+  if (container.dataset.built === '1') return;
+  container.innerHTML = '';
+  const corner = document.createElement('div'); corner.className='gh'; container.appendChild(corner);
+  for (let c=0;c<SIZE;c++){ const gh=document.createElement('div'); gh.className='gh'; gh.textContent=COLS[c]; container.appendChild(gh); }
+  for (let r=0;r<SIZE;r++){
+    const rh=document.createElement('div'); rh.className='gh'; rh.textContent=r+1; container.appendChild(rh);
+    for (let c=0;c<SIZE;c++){
+      const cell=document.createElement('div'); cell.className='cell'; cell.dataset.r=r; cell.dataset.c=c;
+      container.appendChild(cell);
+    }
+  }
+  container.dataset.built = '1';
+}
+
+// ── FIRE BAR ──
+function renderFireBar(s) {
+  const bar = document.getElementById('fire-bar');
+  if (s.pendingFire) {
+    const { r, c, teamId } = s.pendingFire;
+    document.getElementById('fire-coord').textContent = `${COLS[c]}${r+1}`;
+    const team = s.teams[teamId];
+    document.getElementById('fire-team').textContent = team.name;
+    document.getElementById('fire-team').style.color = team.color;
+    bar.classList.remove('hidden');
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+function resolveFire() {
+  socket.emit('admin:resolveFire');
+}
+function cancelFire() {
+  socket.emit('admin:cancelFire');
+}
+
+// ── LOG ──
+function renderLog(s) {
+  const list = document.getElementById('log-list');
+  list.innerHTML = [...s.log].reverse().map(l => `<div class="log-item">${l.msg}</div>`).join('');
+}
+
+// ── END OVERLAY ──
+let endShown = false;
+function showEndOverlay(s) {
+  if (endShown) return;
+  endShown = true;
+  const sorted = [...s.teams].sort((a,b) => b.points - a.points);
+  const list = document.getElementById('order-list');
+  list.innerHTML = sorted.map((t,i) => {
+    let label;
+    if (i===0) label = '🏆 PERINGKAT 1';
+    else if (i===1) label = '🥈 PERINGKAT 2';
+    else if (i===2) label = '🥉 PERINGKAT 3';
+    else label = `Peringkat ${i+1}`;
+    const status = t.eliminated ? `gugur #${t.eliminatedOrder}` : `${t.lives} nyawa tersisa`;
+    return `<div><span class="o-rank">${label}</span><span style="color:${t.color}">${escapeHtml(t.name)}</span> — <b>${t.points} pts</b> (${status})</div>`;
+  }).join('');
+  document.getElementById('ov-end').classList.remove('hidden');
+}
+function closeEndOverlay() {
+  document.getElementById('ov-end').classList.add('hidden');
+}
+
+// ── RESET ──
+function resetRoom() {
+  if (!confirm('Reset seluruh permainan? Skor dan papan akan dikosongkan, kode room tetap sama.')) return;
+  endShown = false;
+  socket.emit('admin:resetRoom');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>

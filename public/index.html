@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Naval Strike — Lobby</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg:#0a1620; --panel:#0f2436; --line:#1a3a52; --line2:#234a66;
+    --sonar:#2dd4bf; --fire:#ff5d5d; --gold:#f5c542; --dim:#5b7c91; --white:#e8f1f5;
+  }
+  body{
+    font-family:'Space Grotesk',sans-serif; background:var(--bg);
+    background-image:radial-gradient(circle at 20% 20%, rgba(45,212,191,.06), transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(255,93,93,.05), transparent 40%);
+    color:var(--white); min-height:100vh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; padding:24px;
+  }
+  .wrap{ width:100%; max-width:420px; text-align:center; }
+  h1{ font-family:'Space Mono',monospace; font-size:clamp(1.4rem,6vw,2.2rem); letter-spacing:.12em;
+      color:var(--sonar); text-shadow:0 0 18px rgba(45,212,191,.35); margin-bottom:8px; }
+  h1 span{ color:var(--white); }
+  p.sub{ color:var(--dim); font-size:.85rem; margin-bottom:34px; line-height:1.6; }
+  .cards{ display:flex; flex-direction:column; gap:14px; }
+  .card{
+    display:block; background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:22px; text-decoration:none; color:var(--white); text-align:left;
+    transition:all .15s;
+  }
+  .card:hover{ border-color:var(--sonar); transform:translateY(-2px); }
+  .card .icon{ font-size:1.8rem; margin-bottom:8px; }
+  .card h2{ font-family:'Space Mono',monospace; font-size:1.05rem; letter-spacing:.04em; margin-bottom:4px; }
+  .card p{ color:var(--dim); font-size:.8rem; line-height:1.5; }
+  .card.admin h2{ color:var(--gold); }
+  .card.player h2{ color:var(--sonar); }
+  .card.spectator h2{ color:#a78bfa; }
+  .card.spectator:hover{ border-color:#a78bfa; }
+  footer{ margin-top:36px; font-size:.7rem; color:var(--dim); letter-spacing:.04em; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>NAVAL <span>STRIKE</span></h1>
+    <p class="sub">Battleship Kuis — 6 Tim Peserta &amp; 1 Operator Juri<br>Pilih peranmu untuk masuk ke permainan.</p>
+    <div class="cards">
+      <a class="card admin" href="/admin.html">
+        <div class="icon">🧭</div>
+        <h2>JURI / ADMIN</h2>
+        <p>Buat room baru, dapatkan kode unik, kendalikan jalannya pertempuran dan skor.</p>
+      </a>
+      <a class="card player" href="/player.html">
+        <div class="icon">🚢</div>
+        <h2>PESERTA</h2>
+        <p>Masukkan kode room dari juri, tempatkan kapal, dan tembak koordinat saat gilirmu.</p>
+      </a>
+      <a class="card spectator" href="/spectator.html">
+        <div class="icon">📺</div>
+        <h2>SPECTATOR</h2>
+        <p>Layar proyektor — menampilkan papan koordinat seluruh tim. Hanya 1 device per game.</p>
+      </a>
+    </div>
+    <footer>NAVAL STRIKE — REALTIME ARENA</footer>
+  </div>
+</body>
+</html>
